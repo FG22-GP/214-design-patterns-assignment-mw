@@ -26,5 +26,10 @@ void TextSprite::ClearText() {
 
 void TextSprite::Render() {
 	SDL_Rect textDst = { _posX, _posY, _textSurface->w, _textSurface->h };
-	SDL_RenderCopy(renderer, _textTexture, NULL, &textDst);
+	SDL_RenderCopy(renderer, _textTexture, nullptr, &textDst);
+}
+
+void TextSprite::RenderCentered() {
+	SDL_Rect textDist = { ((int)_posX - _textSurface->w / 2), _posY - _textSurface->h / 2, _textSurface->w, _textSurface->h };
+	SDL_RenderCopy(renderer, _textTexture, nullptr, &textDist);
 }

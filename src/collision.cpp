@@ -17,7 +17,7 @@ AABB AABB::makeFromPositionSize(Vector2<float> position, float h, float w) {
 	return boxCollider;
 }
 
-bool CircleIntersect(Circle& circleA, Circle& circleB) {
+bool CircleIntersect(Circle circleA, Circle circleB) {
 	float dx = circleB.position.x - circleA.position.x;
 	float dy = circleB.position.y - circleA.position.y;
 

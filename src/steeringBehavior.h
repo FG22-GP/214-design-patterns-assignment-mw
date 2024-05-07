@@ -3,6 +3,8 @@
 #include "rayCast.h"
 #include "vector2.h"
 
+#include <memory>
+
 class EnemyBase;
 
 struct SteeringOutput {
@@ -14,7 +16,7 @@ class SteeringBehavior {
 public:
 	SteeringBehavior() {}
 	~SteeringBehavior() {}
-	virtual SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) = 0;
+	virtual SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) = 0;
 
 protected:
 	SteeringOutput _result;
@@ -25,7 +27,7 @@ class AlignBehavior : public SteeringBehavior {
 public:
 	AlignBehavior() {}
 	~AlignBehavior() {}
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	float _angularAcceleration = 0.f;
@@ -38,7 +40,7 @@ public:
 	FaceBehavior() {}
 	~FaceBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	Vector2<float> _direction = { 0.f, 0.f };
@@ -49,7 +51,7 @@ public:
 	LookAtDirectionBehavior() {}
 	~LookAtDirectionBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 };
 
 class ArriveBehavior : public SteeringBehavior {
@@ -57,7 +59,7 @@ public:
 	ArriveBehavior() {}
 	~ArriveBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	Vector2<float> _targetVelocity = { 0.f, 0.f };
@@ -72,7 +74,7 @@ public:
 	CollisionAvoidanceBehavior() {}
 	~CollisionAvoidanceBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	bool _gotTarget = false;
@@ -101,7 +103,7 @@ public:
 	SeekBehavior(bool fleeBehaviour) : _fleeBehaviour(fleeBehaviour) {}
 	~SeekBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	bool _fleeBehaviour = false;
@@ -112,7 +114,7 @@ public:
 	ObstacleAvoidanceBehavior() : SeekBehavior(false) {}
 	~ObstacleAvoidanceBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	Ray _ray;
@@ -125,7 +127,7 @@ public:
 	PursueBehavior(bool evadeBehaviour) : SeekBehavior(evadeBehaviour) {}
 	~PursueBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	float _distance = 0.f;
@@ -141,7 +143,7 @@ public:
 	SeparationBehavior() {}
 	~SeparationBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	Vector2<float> _targetPosition = Vector2<float>(0, 0);
@@ -155,7 +157,7 @@ public:
 	VelocityMatchBehaviour() {}
 	~VelocityMatchBehaviour() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 };
 
 class WanderBehavior : public FaceBehavior {
@@ -163,7 +165,7 @@ public:
 	WanderBehavior() {}
 	~WanderBehavior() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy) override;
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy) override;
 
 private:
 	float _wanderOrientation = 0;
@@ -180,7 +182,7 @@ public:
 	BlendSteering() {}
 	~BlendSteering() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy);
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy);
 	void AddSteeringBehaviour(BehaviorAndWeight behaviour);
 	void ClearBehaviours();
 
@@ -196,7 +198,7 @@ public:
 	PrioritySteering() {}
 	~PrioritySteering() {}
 
-	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase* enemy);
+	SteeringOutput Steering(BehaviorData behaviorData, EnemyBase& enemy);
 
 	void AddGroup(BlendSteering& behaviour);
 

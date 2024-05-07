@@ -18,6 +18,7 @@ public:
 	void ClearText();
 
 	void Render();
+	void RenderCentered();
 
 private:
 	TTF_Font* _font;

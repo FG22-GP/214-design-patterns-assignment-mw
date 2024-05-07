@@ -5,7 +5,8 @@
 #include "enemyManager.h"
 #include "gameEngine.h"
 
-Projectile::Projectile(ProjectileType projectileType, const char* spritePath, unsigned int projectileDamage, unsigned int objectID) : ObjectBase(objectID) {
+Projectile::Projectile(ProjectileType projectileType, const char* spritePath, unsigned int projectileDamage, unsigned int objectID) : 
+	ObjectBase(objectID, ObjectType::Projectile) {
 	_sprite = std::make_shared<Sprite>();
 	_sprite->Load(spritePath);
 	_projectileType = projectileType;
@@ -28,12 +29,18 @@ void Projectile::Render() {
 	_sprite->RenderWithOrientation(_position, _orientation);
 }
 
+void Projectile::RenderText() {}
+
 const Circle Projectile::GetCollider() const {
 	return _circleCollider;
 }
 
 const ProjectileType Projectile::GetProjectileType() const {
 	return _projectileType;
+}
+
+const ObjectType Projectile::GetObjectType() const {
+	return _objectType;
 }
 
 const unsigned int Projectile::GetObjectID() const {

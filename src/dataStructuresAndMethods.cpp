@@ -1,4 +1,5 @@
 #include "dataStructuresAndMethods.h"
+#include "formationManager.h"
 #include "gameEngine.h"
 #include "objectBase.h"
 
@@ -38,7 +39,7 @@ Vector2<float> RotateVector(float degree, Vector2<float> startPoint, Vector2<flo
 
 float RandomBinomal(float a, float b) {
 	std::uniform_real_distribution<float> dist(a, b);
-	float randomNumber = dist(randomDevice);
+	float randomNumber = dist(randomEngine);
 	return randomNumber;
 }
 
@@ -55,32 +56,12 @@ float WrapMinMax(float rotation, float minValue, float maxValue) {
 	return minValue + WrapMax(rotation - minValue, maxValue - minValue);
 }
 
-/*
-
-int BinarySearch(std::vector<std::shared_ptr<ObjectBase>> objectVector, int low, int high, int targetID) {
-	while (low <= high) {
-		int mid = low + (high - low) / 2;
-
-		if (objectVector[mid]->GetObjectID() == targetID) {
-			return mid;
-		}
-
-		if (objectVector[mid]->GetObjectID() < targetID) {
-			low = mid + 1;
-		}
-		else {
-			high = mid - 1;
-		}
-	}
-	return -1;
-}
-
-int Partition(std::vector<std::shared_ptr<ObjectBase>> objectVector, int start, int end) {
-	int pivot = objectVector[start]->GetObjectID();
+int Partition(std::vector<float>& objectVector, int start, int end) {
+	float pivot = objectVector[start];
 
 	int count = 0;
 	for (int i = start + 1; i <= end; i++) {
-		if (objectVector[i]->GetObjectID() <= pivot) {
+		if (objectVector[i] <= pivot) {
 			count++;
 		}
 	}
@@ -92,11 +73,11 @@ int Partition(std::vector<std::shared_ptr<ObjectBase>> objectVector, int start, 
 
 	while (i < pivotIndex && k > pivotIndex) {
 
-		while (objectVector[i]->GetObjectID() <= pivot) {
+		while (objectVector[i] <= pivot) {
 			i++;
 		}
 
-		while (objectVector[k]->GetObjectID() > pivot) {
+		while (objectVector[k] > pivot) {
 			k--;
 		}
 
@@ -106,7 +87,7 @@ int Partition(std::vector<std::shared_ptr<ObjectBase>> objectVector, int start, 
 	}
 	return pivotIndex;
 }
-void QuickSort(std::vector<std::shared_ptr<ObjectBase>> objectVector, int start, int end) {
+void QuickSort(std::vector<float>& objectVector, int start, int end) {
 	if (start >= end) {
 		return;
 	}
@@ -115,4 +96,85 @@ void QuickSort(std::vector<std::shared_ptr<ObjectBase>> objectVector, int start,
 	QuickSort(objectVector, start, p - 1);
 	QuickSort(objectVector, p + 1, end);
 }
-*/
+
+int Partition(std::vector<CostAndSlot>& objectVector, int start, int end) {
+	float pivot = objectVector[start].cost;
+
+	int count = 0;
+	for (int i = start + 1; i <= end; i++) {
+		if (objectVector[i].cost <= pivot) {
+			count++;
+		}
+	}
+
+	int pivotIndex = start + count;
+	std::swap(objectVector[pivotIndex], objectVector[start]);
+
+	int i = start, k = end;
+
+	while (i < pivotIndex && k > pivotIndex) {
+
+		while (objectVector[i].cost <= pivot) {
+			i++;
+		}
+
+		while (objectVector[k].cost > pivot) {
+			k--;
+		}
+
+		if (i < pivotIndex && k > pivotIndex) {
+			std::swap(objectVector[i++], objectVector[k--]);
+		}
+	}
+	return pivotIndex;
+}
+void QuickSort(std::vector<CostAndSlot>& objectVector, int start, int end) {
+	if (start >= end) {
+		return;
+	}
+	int p = Partition(objectVector, start, end);
+
+	QuickSort(objectVector, start, p - 1);
+	QuickSort(objectVector, p + 1, end);
+}
+
+int Partition(std::vector<CharacterAndSlots>& objectVector, int start, int end) {
+	float pivot = objectVector[start].assignmentEase;
+
+	int count = 0;
+	for (int i = start + 1; i <= end; i++) {
+		if (objectVector[i].assignmentEase <= pivot) {
+			count++;
+		}
+	}
+
+	int pivotIndex = start + count;
+	std::swap(objectVector[pivotIndex], objectVector[start]);
+
+	int i = start, k = end;
+
+	while (i < pivotIndex && k > pivotIndex) {
+
+		while (objectVector[i].assignmentEase <= pivot) {
+			i++;
+		}
+
+		while (objectVector[k].assignmentEase > pivot) {
+			k--;
+		}
+
+		if (i < pivotIndex && k > pivotIndex) {
+			std::swap(objectVector[i++], objectVector[k--]);
+		}
+	}
+	return pivotIndex;
+}
+void QuickSort(std::vector<CharacterAndSlots>& objectVector, int start, int end) {
+	if (start >= end) {
+		return;
+	}
+	int p = Partition(objectVector, start, end);
+
+	QuickSort(objectVector, start, p - 1);
+	QuickSort(objectVector, p + 1, end);
+}

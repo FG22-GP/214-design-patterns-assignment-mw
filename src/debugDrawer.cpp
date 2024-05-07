@@ -3,16 +3,25 @@
 
 #include <SDL2/SDL.h>
 
-void DebugDrawer::AddDebugBox(Vector2<float> position, Vector2<float> min, Vector2<float> max, std::array<int, 4> color) {
+void DebugDrawer::AddDebugBox(Vector2<float> position, Vector2<float> min, Vector2<float> max, SDL_Color color) {
 	DebugBox debugBox;
 	debugBox.min = min;
 	debugBox.max = max;
 	debugBox.position = position;
 	debugBox.color = color;
-	_debugBox.emplace_back(debugBox);
+	_debugBoxes.emplace_back(debugBox);
 }
 
-void DebugDrawer::AddDebugCircle(Vector2<float> position, float radius, std::array<int, 4> color) {
+void DebugDrawer::AddDebugRectangle(Vector2<float> position, Vector2<float> min, Vector2<float> max, SDL_Color color) {
+	DebugBox debugBox;
+	debugBox.min = min;
+	debugBox.max = max;
+	debugBox.position = position;
+	debugBox.color = color;
+	_debugRectangles.emplace_back(debugBox);
+}
+
+void DebugDrawer::AddDebugCircle(Vector2<float> position, float radius, SDL_Color color) {
 	DebugCircle debugCircle;
 	debugCircle.position = position;
 	debugCircle.radius = radius;
@@ -20,7 +29,7 @@ void DebugDrawer::AddDebugCircle(Vector2<float> position, float radius, std::arr
 	_debugCircles.emplace_back(debugCircle);
 }
 
-void DebugDrawer::AddDebugCross(Vector2<float> position, float length, std::array<int, 4> color) {
+void DebugDrawer::AddDebugCross(Vector2<float> position, float length, SDL_Color color) {
 	DebugLine debugLineHorizontal;
 	DebugLine debugLineVertical;
 
@@ -36,7 +45,7 @@ void DebugDrawer::AddDebugCross(Vector2<float> position, float length, std::arra
 	_debugLines.emplace_back(debugLineVertical);
 }
 
-void DebugDrawer::AddDebugLine(Vector2<float> startPosition, Vector2<float> endPosition, std::array<int, 4> color) {
+void DebugDrawer::AddDebugLine(Vector2<float> startPosition, Vector2<float> endPosition, SDL_Color color) {
 	DebugLine debugLine;
 	debugLine.startPosition = startPosition;
 	debugLine.endPosition = endPosition;
@@ -45,22 +54,36 @@ void DebugDrawer::AddDebugLine(Vector2<float> startPosition, Vector2<float> endP
 }
 
 void DebugDrawer::DrawBoxes() {
-	for (int i = 0; i < _debugBox.size(); i++) {
-		SDL_SetRenderDrawColor(renderer, _debugBox[i].color[0], _debugBox[i].color[1], _debugBox[i].color[2], _debugBox[i].color[3]);
+	for (int i = 0; i < _debugBoxes.size(); i++) {
+		SDL_SetRenderDrawColor(renderer, _debugBoxes[i].color.r, _debugBoxes[i].color.g, _debugBoxes[i].color.b, _debugBoxes[i].color.a);
 		SDL_Rect rect = {
-			_debugBox[i].position.x - ((_debugBox[i].max.x - _debugBox[i].min.x) * 0.5f),
-			_debugBox[i].position.y - ((_debugBox[i].max.y - _debugBox[i].min.y) * 0.5f),
-			_debugBox[i].max.x - _debugBox[i].min.x,
-			_debugBox[i].max.y - _debugBox[i].min.y			
+			_debugBoxes[i].position.x - ((_debugBoxes[i].max.x - _debugBoxes[i].min.x) * 0.5f),
+			_debugBoxes[i].position.y - ((_debugBoxes[i].max.y - _debugBoxes[i].min.y) * 0.5f),
+			_debugBoxes[i].max.x - _debugBoxes[i].min.x,
+			_debugBoxes[i].max.y - _debugBoxes[i].min.y
+		};
+		SDL_RenderFillRect(renderer, &rect);
+	}
+	_debugBoxes.clear();
+}
+
+void DebugDrawer::DrawRectangles() {
+	for (int i = 0; i < _debugRectangles.size(); i++) {
+		SDL_SetRenderDrawColor(renderer, _debugRectangles[i].color.r, _debugRectangles[i].color.g, _debugRectangles[i].color.b, _debugRectangles[i].color.a);
+		SDL_Rect rect = {
+			_debugRectangles[i].position.x - ((_debugRectangles[i].max.x - _debugRectangles[i].min.x) * 0.5f),
+			_debugRectangles[i].position.y - ((_debugRectangles[i].max.y - _debugRectangles[i].min.y) * 0.5f),
+			_debugRectangles[i].max.x - _debugRectangles[i].min.x,
+			_debugRectangles[i].max.y - _debugRectangles[i].min.y			
 		};
 		SDL_RenderDrawRect(renderer, &rect);
 	}
-	_debugBox.clear();
+	_debugRectangles.clear();
 }
 
 void DebugDrawer::DrawCircles() {
 	for (int i = 0; i < _debugCircles.size(); i++) {
-		SDL_SetRenderDrawColor(renderer, _debugBox[i].color[0], _debugBox[i].color[1], _debugBox[i].color[2], _debugBox[i].color[3]);
+		SDL_SetRenderDrawColor(renderer, _debugRectangles[i].color.r, _debugRectangles[i].color.g, _debugRectangles[i].color.b, _debugRectangles[i].color.a);
 
 		int resolution = 24;
 		float step = (2 * PI) / resolution;
@@ -89,7 +112,7 @@ void DebugDrawer::DrawCircles() {
 
 void DebugDrawer::DrawLines() {
 	for (int i = 0; i < _debugLines.size(); i++) {
-	SDL_SetRenderDrawColor(renderer, _debugLines[i].color[0], _debugLines[i].color[1], _debugLines[i].color[2], _debugLines[i].color[3]);
+	SDL_SetRenderDrawColor(renderer, _debugLines[i].color.r, _debugLines[i].color.g, _debugLines[i].color.b, _debugLines[i].color.a);
 		SDL_RenderDrawLineF(renderer, _debugLines[i].startPosition.x, _debugLines[i].startPosition.y, 
 			_debugLines[i].endPosition.x, _debugLines[i].endPosition.y);
 	}

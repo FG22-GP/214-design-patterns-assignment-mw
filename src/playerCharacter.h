@@ -1,21 +1,29 @@
 #pragma once
 #include "collision.h"
-#include "rayCast.h"
+#include "objectBase.h"
 #include "sprite.h"
 #include "textSprite.h"
 #include "vector2.h"
 
 class Timer;
+class Projectile;
 
-class PlayerCharacter {
+class PlayerCharacter : ObjectBase {
 public:
-	PlayerCharacter(float characterOrientation, Vector2<float> characterPosition);
+	PlayerCharacter(float characterOrientation, unsigned int objectID, Vector2<float> characterPosition);
 	~PlayerCharacter();
 
-	void Init();
-	void Update();
-	void Render();
-	void RenderText();
+	void Init() override;
+	void Update() override;
+	void Render() override;
+
+	void RenderText() override;
+
+	const unsigned int GetObjectID() const override;
+	const ObjectType GetObjectType() const override;
+
+	const std::shared_ptr<Sprite> GetSprite() const override;
+	const Vector2<float> GetPosition() const override;
 
 	void ExecuteDeath();
 	void FireProjectile();
@@ -25,16 +33,11 @@ public:
 
 	const Circle GetCircleCollider() const;
 
-	std::shared_ptr<Sprite> GetSprite();
-
 	const float GetOrientation() const;	
 
 	const int GetCurrentHealth() const;
 
-	const Vector2<float> GetPosition() const;
-
 private:
-	void UpdateCollision();
 	void UpdateHealthRegen();
 	void UpdateInput();
 	void UpdateMovement();
@@ -49,20 +52,16 @@ private:
 
 	const int _maxHealth = 1000;
 
-	float _orientation = 0.f;
-
 	int _currentHealth = 0;
 
-	std::shared_ptr<Sprite> _characterSprite = nullptr;
+	std::shared_ptr<Projectile> _collidedProjectile = nullptr;
+
 	std::shared_ptr<TextSprite> _healthTextSprite = nullptr;
 
 	std::shared_ptr<Timer> _attackTimer = nullptr;
 	std::shared_ptr<Timer> _regenerationTimer = nullptr;
 
-	Vector2<float> _position = Vector2<float>(0.f, 0.f);
 	Vector2<float> _oldPosition = Vector2<float>(0.f, 0.f);
 	Vector2<float> _direction = Vector2<float>(0.f, 0.f);
-
-
 };
 

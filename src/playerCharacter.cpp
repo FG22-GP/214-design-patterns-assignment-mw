@@ -4,19 +4,21 @@
 #include "debugDrawer.h"
 #include "enemyManager.h"
 #include "gameEngine.h"
+#include "objectBase.h"
 #include "obstacleManager.h"
 #include "obstacleWall.h"
 #include "projectile.h"
 #include "projectileManager.h"
+#include "quadTree.h"
 #include "stateStack.h"
 #include "timerManager.h"
-#include "quadTree.h"
 
 #include <string>
 
-PlayerCharacter::PlayerCharacter(float characterOrientation, Vector2<float> characterPosition) {
-	_characterSprite = std::make_shared<Sprite>();
-	_characterSprite->Load(_kingSprite);
+PlayerCharacter::PlayerCharacter(float characterOrientation, unsigned int objectID, Vector2<float> characterPosition) : 
+	ObjectBase(objectID, ObjectType::Player) {
+	_sprite = std::make_shared<Sprite>();
+	_sprite->Load(_kingSprite);
 
 	_orientation = characterOrientation;
 	_position = characterPosition;
@@ -26,7 +28,7 @@ PlayerCharacter::PlayerCharacter(float characterOrientation, Vector2<float> char
 
 	_circleCollider.position = characterPosition;
 	_circleCollider.radius = 16.f;
-
+	
 	_healthTextSprite = std::make_shared<TextSprite>();
 	_healthTextSprite->SetTargetPosition(Vector2<float>(windowWidth * 0.05f, windowHeight * 0.9f));
 }
@@ -40,20 +42,28 @@ void PlayerCharacter::Init() {
 }
 
 void PlayerCharacter::Update() {
-	UpdateCollision();
 	UpdateHealthRegen();
 	UpdateInput();
 	UpdateMovement();
 	UpdateTarget();
+
+	_circleCollider.position = _position;
 }
 
 void PlayerCharacter::Render() {
-
-	_characterSprite->RenderWithOrientation(_position, _orientation);
+	_sprite->RenderWithOrientation(_position, _orientation);
 }
 
 void PlayerCharacter::RenderText() {
 	_healthTextSprite->Render();
+}
+
+const unsigned int PlayerCharacter::GetObjectID() const {
+	return _objectID;
+}
+
+const ObjectType PlayerCharacter::GetObjectType() const {
+	return _objectType;
 }
 
 void PlayerCharacter::TakeDamage(unsigned int damageAmount) {
@@ -84,17 +94,6 @@ void PlayerCharacter::Respawn() {
 
 	enemyManager->RemoveAllEnemies();
 	projectileManager->RemoveAllProjectiles();
-}
-
-void PlayerCharacter::UpdateCollision() {
-	std::vector<std::shared_ptr<Projectile>> porjectilesHit = projectileManager->GetProjectileQuadTree()->Query(_circleCollider);
-	for (unsigned int i = 0; i < porjectilesHit.size(); i++) {
-		if (porjectilesHit[i]->GetProjectileType() == ProjectileType::PlayerProjectile) {
-			continue;
-		}
-		TakeDamage(porjectilesHit[i]->GetProjectileDamage());
-		projectileManager->RemoveProjectile(porjectilesHit[i]->GetProjectileType(), porjectilesHit[i]->GetObjectID());
-	}
 }
 
 void PlayerCharacter::UpdateHealthRegen() {
@@ -156,8 +155,8 @@ const Circle PlayerCharacter::GetCircleCollider() const {
 	return _circleCollider;
 }
 
-std::shared_ptr<Sprite> PlayerCharacter::GetSprite() {
-	return _characterSprite;
+const std::shared_ptr<Sprite> PlayerCharacter::GetSprite() const {
+	return _sprite;
 }
 
 const float PlayerCharacter::GetOrientation() const {

@@ -1,4 +1,5 @@
 #pragma once
+#include "formationManager.h"
 #include "quadTree.h"
 #include "vector2.h"
 
@@ -28,7 +29,6 @@ enum class SteeringBehaviorType {
 	Count
 };
 
-
 enum class EnemyType {
 	Boar,
 	Human,
@@ -36,6 +36,8 @@ enum class EnemyType {
 };
 
 struct BehaviorData {
+	float rotation = 0.f;
+
 	float targetOrientation = 0.f;
 
 	float timeToTarget = 0.f;
@@ -49,10 +51,10 @@ struct BehaviorData {
 	float maxRotation = 0.f;
 
 	//seek data
-	float maxLinearAcceleration = 0.f;
-	float maxSpeed = 0.f;
-	float linearSlowDownRadius = 0.f;
-	float linearTargetRadius = 0.f;
+	float maxLinearAcceleration = 25.f;
+	float maxSpeed = 50.f;
+	float linearSlowDownRadius = 50.f;
+	float linearTargetRadius = 10.f;
 
 	//pursue data
 	float maxPrediction = 0.f;
@@ -85,18 +87,17 @@ public:
 
 	void Init();
 	void Update();
+	void UpdateSurvival();
+	void UpdateTactical();
 	void Render();
 
 	std::vector<std::shared_ptr<EnemyBase>> GetActiveEnemies();
-	std::shared_ptr<QuadTree<std::shared_ptr<EnemyBase>>> GetEnemyQuadTree();
-	std::unordered_map<SteeringBehaviorType, std::shared_ptr<SteeringBehavior>> GetSteeringBehaviors();
-
-	void ClearEnemyQuadTree();
 
 	void CreateNewEnemy(EnemyType enemyType, float orientation,
 		Vector2<float> direction, Vector2<float> position);
 
-	void EnemySpawner();
+	void TacticalEnemySpawner();
+	void SurvivalEnemySpawner();
 
 	void SpawnEnemy(EnemyType enemyType, float orientation,
 		Vector2<float> direction, Vector2<float> position);
@@ -114,17 +115,15 @@ public:
 	void QuickSort( int start, int end);
 
 private:
-	std::shared_ptr<QuadTree<std::shared_ptr<EnemyBase>>> _enemyQuadTree;
-
-	std::vector<std::shared_ptr<EnemyBase>> _activeEnemies;
+	std::vector<std::shared_ptr<FormationManager>> _formationManagers;
 
 	std::shared_ptr<Timer> _spawnTimer = nullptr;
 
+	std::vector<std::shared_ptr<EnemyBase>> _activeEnemies;
+
 	std::unordered_map<EnemyType, std::shared_ptr<ObjectPool<std::shared_ptr<EnemyBase>>>> _enemyPools;
 
-	std::unordered_map<SteeringBehaviorType, std::shared_ptr<SteeringBehavior>> _steeringBehaviors;
-
-	int _lastEnemyID = 0;
+	int _lastEnemyID = 1;
 	int _latestEnemyIndex = -1;
 
 	unsigned int _enemyAmountLimit = 1000;

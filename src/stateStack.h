@@ -1,12 +1,15 @@
 #pragma once
 #include "collision.h"
-#include "sprite.h"
+#include "SDL2/SDL_pixels.h"
 
 #include <array>
 #include <memory>
 #include <stack>
 #include <unordered_map>
 #include "vector"
+
+class TextSprite;
+
 
 enum class ButtonType {
 	MainMenu,
@@ -19,19 +22,20 @@ enum class ButtonType {
 
 class Button {
 public:
-	Button(const char* spritePath, int height, int width, Vector2<float> position);
+	Button(const char* buttonText, int height, int width, Vector2<float> position);
 	~Button() {}
 
 	bool ClickedOn();
 	void Render();
+	void RenderText();
 	void SetTargetPosition(Vector2<float> position);
 
 private:
-	int _height;
-	int _width;
-	
+	SDL_Color _buttonColor = { 120,81,169, 255 };
+	SDL_Color _textColor = { 212, 175, 55, 255 };
+
 	AABB _boxCollider;
-	std::shared_ptr<Sprite> _sprite;
+	std::shared_ptr<TextSprite> _text;
 	Vector2<float> _position;
 };
 
@@ -61,12 +65,11 @@ public:
 	void RenderStateText();
 
 private:
-	const char* _mainMenuButtonSprite = "res/sprites/MainMenuButton.png";
-	const char* _playButtonSprite = "res/sprites/PlayButton.png";
-	const char* _quitButtonSprite = "res/sprites/QuitButton.png";
-	const char* _restartButtonSprite = "res/sprites/RestartButton.png";
-	const char* _resumeButtonSprite = "res/sprites/ResumeButton.png";
-
+	const char* _mainMenuText = "Main Menu";
+	const char* _playText = "Play";
+	const char* _quitText = "Quit";
+	const char* _restartText = "Restart";
+	const char* _resumeText = "Resume";
 	std::vector<std::shared_ptr<State>> _states;
 
 };
@@ -81,10 +84,32 @@ public:
 	void Render() override;
 	void RenderText() override;
 };
-class GameState : public State {
+class InGameState : public State {
 public:
-	GameState();
-	~GameState() {}
+	InGameState();
+	~InGameState() {}
+
+	void SetButtonPositions() override;
+	void Update() override;
+	void Render() override;
+	void RenderText() override;
+
+};
+class SurvivalGameState : public InGameState {
+public:
+	SurvivalGameState();
+	~SurvivalGameState() {}
+
+	void SetButtonPositions() override;
+	void Update() override;
+	void Render() override;
+	void RenderText() override;
+
+};
+class TacticalGameState : public InGameState {
+public:
+	TacticalGameState();
+	~TacticalGameState() {}
 
 	void SetButtonPositions() override;
 	void Update() override;
@@ -101,6 +126,12 @@ public:
 	void Update() override;
 	void Render() override;
 	void RenderText() override;
+
+private:
+	const char* _gameTitle = "TheOneTrueKing";
+	SDL_Color _textColor = { 212, 175, 55, 255 };
+	std::shared_ptr<TextSprite> _titleText;
+	Vector2<float> _titleTextPosition;
 };
 class PauseState : public State {
 public:

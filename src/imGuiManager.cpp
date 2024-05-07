@@ -26,6 +26,14 @@ void ImGuiHandler::ShowFloat2Value(const char* name, const char* label, float a,
 	ImGui::End();
 }
 
+void ImGuiHandler::ShowVector2Value(const char* name, const char* label, Vector2<float> value) {
+	ImGui::Begin(name);
+	ImGui::Text(label);
+	ImGui::SameLine();
+	ImGui::Text(": %f, %f", value.x, value.y);
+	ImGui::End();
+}
+
 void ImGuiHandler::InputFloat(const char* name, const char* label, float& a) {
 	ImGui::Begin(name);
 	ImGui::InputFloat(label, &a);

@@ -6,10 +6,13 @@
 #include "obstacleManager.h"
 #include "playerCharacter.h"
 #include "projectileManager.h"
+#include "quadTree.h"
 #include "rayCast.h"
 #include "stateStack.h"
 #include "steeringBehavior.h"
 #include "timerManager.h"
+
+#include "enemyHuman.h"
 
 #include <vector>
 
@@ -23,6 +26,7 @@ std::shared_ptr<ImGuiHandler> imGuiHandler;
 std::shared_ptr<ObstacleManager> obstacleManager;
 std::shared_ptr<PlayerCharacter> playerCharacter;
 std::shared_ptr<ProjectileManager> projectileManager;
+std::shared_ptr<QuadTree<std::shared_ptr<ObjectBase>>> objectBaseQuadTree;
 std::shared_ptr<RayCast> rayCast;
 std::shared_ptr<SteeringBehavior> separationBehavior;
 std::shared_ptr<TimerManager> timerManager;

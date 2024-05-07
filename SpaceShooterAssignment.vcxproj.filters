@@ -23,8 +23,11 @@
     <Filter Include="src\game_engine">
       <UniqueIdentifier>{8b9e70f6-5772-4e38-8f64-41db9e467d4c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\enemies_ai">
+    <Filter Include="src\enemies">
       <UniqueIdentifier>{84d447e8-14fc-4c0f-b9d9-c55a7e3ddaeb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\states">
+      <UniqueIdentifier>{671db714-0f0f-4497-a7e3-f0e343c255bc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -65,19 +68,16 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\enemyBoar.cpp">
-      <Filter>src\enemies_ai</Filter>
+      <Filter>src\enemies</Filter>
     </ClCompile>
     <ClCompile Include="src\enemyHuman.cpp">
-      <Filter>src\enemies_ai</Filter>
+      <Filter>src\enemies</Filter>
     </ClCompile>
     <ClCompile Include="src\enemyManager.cpp">
-      <Filter>src\enemies_ai</Filter>
+      <Filter>src\enemies</Filter>
     </ClCompile>
     <ClCompile Include="src\enemyBase.cpp">
-      <Filter>src\enemies_ai</Filter>
-    </ClCompile>
-    <ClCompile Include="src\steeringBehavior.cpp">
-      <Filter>src\enemies_ai</Filter>
+      <Filter>src\enemies</Filter>
     </ClCompile>
     <ClCompile Include="src\projectile.cpp">
       <Filter>src\projectiles</Filter>
@@ -97,9 +97,6 @@
     <ClCompile Include="src\debugDrawer.cpp">
       <Filter>src\game_engine</Filter>
     </ClCompile>
-    <ClCompile Include="src\dataStructuresAndMethods.cpp">
-      <Filter>src\game_engine</Filter>
-    </ClCompile>
     <ClCompile Include="src\collision.cpp">
       <Filter>src\game_engine</Filter>
     </ClCompile>
@@ -113,9 +110,6 @@
       <Filter>src\game_engine</Filter>
     </ClCompile>
     <ClCompile Include="src\spriteSheet.cpp">
-      <Filter>src\game_engine</Filter>
-    </ClCompile>
-    <ClCompile Include="src\stateStack.cpp">
       <Filter>src\game_engine</Filter>
     </ClCompile>
     <ClCompile Include="src\textSprite.cpp">
@@ -141,6 +135,15 @@
     </ClCompile>
     <ClCompile Include="src\formationManager.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\dataStructuresAndMethods.cpp">
+      <Filter>src\game_engine</Filter>
+    </ClCompile>
+    <ClCompile Include="src\steeringBehavior.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stateStack.cpp">
+      <Filter>src\states</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -460,19 +463,16 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\enemyManager.h">
-      <Filter>src\enemies_ai</Filter>
+      <Filter>src\enemies</Filter>
     </ClInclude>
     <ClInclude Include="src\enemyBase.h">
-      <Filter>src\enemies_ai</Filter>
+      <Filter>src\enemies</Filter>
     </ClInclude>
     <ClInclude Include="src\enemyBoar.h">
-      <Filter>src\enemies_ai</Filter>
+      <Filter>src\enemies</Filter>
     </ClInclude>
     <ClInclude Include="src\enemyHuman.h">
-      <Filter>src\enemies_ai</Filter>
-    </ClInclude>
-    <ClInclude Include="src\steeringBehavior.h">
-      <Filter>src\enemies_ai</Filter>
+      <Filter>src\enemies</Filter>
     </ClInclude>
     <ClInclude Include="src\projectileManager.h">
       <Filter>src\projectiles</Filter>
@@ -492,9 +492,6 @@
     <ClInclude Include="src\debugDrawer.h">
       <Filter>src\game_engine</Filter>
     </ClInclude>
-    <ClInclude Include="src\dataStructuresAndMethods.h">
-      <Filter>src\game_engine</Filter>
-    </ClInclude>
     <ClInclude Include="src\collision.h">
       <Filter>src\game_engine</Filter>
     </ClInclude>
@@ -508,9 +505,6 @@
       <Filter>src\game_engine</Filter>
     </ClInclude>
     <ClInclude Include="src\spriteSheet.h">
-      <Filter>src\game_engine</Filter>
-    </ClInclude>
-    <ClInclude Include="src\stateStack.h">
       <Filter>src\game_engine</Filter>
     </ClInclude>
     <ClInclude Include="src\textSprite.h">
@@ -533,6 +527,15 @@
     </ClInclude>
     <ClInclude Include="src\formationManager.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dataStructuresAndMethods.h">
+      <Filter>src\game_engine</Filter>
+    </ClInclude>
+    <ClInclude Include="src\steeringBehavior.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stateStack.h">
+      <Filter>src\states</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -5,7 +5,12 @@ public:
 	Timer(float timeInSeconds);
 	~Timer();
 
+	const bool GetTimerActive() const;
 	const bool GetTimerFinished() const;
+	const bool IsWithinCertainTime(float decimalTime) const;
+	
+	const float GetCurrentTime() const;
+	const float GetTimeInSeconds() const;
 
 	void ActivateTimer();
 	void DeactivateTimer();

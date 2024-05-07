@@ -3,13 +3,16 @@
 #include "dataStructuresAndMethods.h"
 #include "debugDrawer.h"
 #include "gameEngine.h"
+#include "imGuiManager.h"
 #include "playerCharacter.h"
 #include "quadTree.h"
 #include "steeringBehavior.h"
 #include "timerManager.h"
 
-EnemyBoar::EnemyBoar(unsigned int objectID, int attackDamage, int maxHealth, float attackRange, float movementSpeed) : 
-	EnemyBase(objectID) {
+#include <memory>
+
+EnemyBoar::EnemyBoar(unsigned int objectID, EnemyType enemyType) :
+	EnemyBase(objectID, enemyType) {
 	_sprite = std::make_shared<Sprite>();
 	_sprite->Load(_boarSprite);
 
@@ -18,40 +21,67 @@ EnemyBoar::EnemyBoar(unsigned int objectID, int attackDamage, int maxHealth, flo
 	_circleCollider.radius = 16.f;
 	_circleCollider.position = _position;
 
-	_maxHealth = maxHealth;
+	_maxHealth = 20;
 	_currentHealth = _maxHealth;
 
-	_attackDamage = attackDamage;
-	_attackRange = attackRange;
-	_movementSpeed = movementSpeed;
+	_attackDamage = 10;
+	_attackRange = 100;
 
 	_behaviorData.angularSlowDownRadius = PI * 0.5f;
 	_behaviorData.angularTargetRadius = PI * 0.005f;
-	_behaviorData.maxAngularAcceleration = PI;
-	_behaviorData.maxRotation = PI;
+	_behaviorData.maxAngularAcceleration = PI * 2.5f;
+	_behaviorData.maxRotation = PI * 2.f;
 
-	_enemyType = EnemyType::Boar;
+	_behaviorData.timeToTarget = 0.1f;
+
+	_behaviorData.maxLinearAcceleration = 75.f;
+	_behaviorData.maxSpeed = 100.f;
+	
+	_behaviorData.linearTargetRadius = _attackRange - 5.f;
+	_behaviorData.linearSlowDownRadius = _attackRange + 25.f;
+
+	_behaviorData.separationThreshold = _circleCollider.radius * 1.5f;
+	_behaviorData.decayCoefficient = 1.f;
+
+	_prioritySteering = std::make_shared<PrioritySteering>();
+	_blendSteering = std::make_shared<BlendSteering>();
+
+	_blendSteering->ClearBehaviours();
+	_blendSteering->AddSteeringBehaviour(BehaviorAndWeight(std::make_shared<SeparationBehavior>(), 1.f));
+	_prioritySteering->AddGroup(*_blendSteering);
+
+	_blendSteering->ClearBehaviours();
+	_blendSteering->AddSteeringBehaviour(BehaviorAndWeight(std::make_shared<ArriveBehavior>(), 1.f));
+	_blendSteering->AddSteeringBehaviour(BehaviorAndWeight(std::make_shared<FaceBehavior>(), 1.f));
+	_prioritySteering->AddGroup(*_blendSteering);
+
+	_attackCooldownTimer = timerManager->CreateTimer(1.f);
+	_chargeAttackTimer = timerManager->CreateTimer(0.5f);
+	_chargeAttackTimer->DeactivateTimer();
 }
 
 EnemyBoar::~EnemyBoar() {}
 
 void EnemyBoar::Init() {
-	_targetPosition = playerCharacter->GetPosition();
-	_direction = _targetPosition - _position;
-
-	_attackTimer =  timerManager->CreateTimer(1.f);
+	_behaviorData.targetPosition = playerCharacter->GetPosition();
+	_direction = _behaviorData.targetPosition - _position;
 }
 
 void EnemyBoar::Update() {
-	UpdateTarget();
-	_queriedEnemies = enemyManager->GetEnemyQuadTree()->Query(_circleCollider);
-	UpdateMovement();
+	_queriedObjects = objectBaseQuadTree->Query(_circleCollider);
+	if(!_isAttacking) {
+		SetTargetPosition(playerCharacter->GetPosition());
+		UpdateMovement();
+	}
 	HandleAttack();
+	_circleCollider.position = _position;
 }
 
 void EnemyBoar::Render() {
 	_sprite->RenderWithOrientation(_position, _orientation);
 }
+
+void EnemyBoar::RenderText() {}
 
 const Circle EnemyBoar::GetCollider() const {
 	return _circleCollider;
@@ -61,20 +91,12 @@ const EnemyType EnemyBoar::GetEnemyType() const {
 	return _enemyType;
 }
 
-const SlotClass EnemyBoar::GetSlotClass() const {
-	return _slotClass;
+const ObjectType EnemyBoar::GetObjectType() const {
+	return _objectType;
 }
 
-const float EnemyBoar::GetAttackDamage() const {
-	return _attackDamage;
-}
-
-const float EnemyBoar::GetAttackRange() const {
-	return _attackRange;
-}
-
-const std::shared_ptr<Timer> EnemyBoar::GetAttackTimer() const {	
-	return _attackTimer;
+const BehaviorData EnemyBoar::GetBehaviorData() const {
+	return _behaviorData;
 }
 
 const float EnemyBoar::GetOrientation() const {
@@ -101,16 +123,16 @@ const Vector2<float> EnemyBoar::GetPosition() const {
 	return _position;
 }
 
-const Vector2<float> EnemyBoar::GetTargetPosition() const {
-	return _targetPosition;
-}
-
 const Vector2<float> EnemyBoar::GetVelocity() const {
 	return _velocity;
 }
 
-const std::vector<std::shared_ptr<EnemyBase>> EnemyBoar::GetQueriedEnemies() const {
-	return _queriedEnemies;
+const std::vector<std::shared_ptr<ObjectBase>> EnemyBoar::GetQueriedObjects() const {
+	return _queriedObjects;
+}
+
+const std::shared_ptr<WeaponComponent> EnemyBoar::GetWeaponComponent() const {
+	return _weaponComponent;
 }
 
 void EnemyBoar::ActivateEnemy(float orienation, Vector2<float> direction, Vector2<float> position) {
@@ -126,7 +148,6 @@ void EnemyBoar::DeactivateEnemy() {
 	_direction = Vector2<float>(0.f, 0.f);
 	_position = Vector2<float>(-10000.f, -10000.f);
 	_circleCollider.position = _position;
-	_attackTimer->DeactivateTimer();
 }
 
 bool EnemyBoar::TakeDamage(unsigned int damageAmount) {
@@ -138,34 +159,63 @@ bool EnemyBoar::TakeDamage(unsigned int damageAmount) {
 }
 
 void EnemyBoar::HandleAttack() {
-	if (IsInDistance(_position, playerCharacter->GetPosition(), _attackRange) && _attackTimer->GetTimerFinished()) {
-		playerCharacter->TakeDamage(_attackDamage);
-		_attackTimer->ResetTimer();
+	if (_attackCooldownTimer->GetTimerActive()) {
+		return;
 	}
+	if (_isAttacking) {
+		_position += _dashDirection * _dashSpeed * deltaTime;
+		if (!_damagedPlayer) {	
+			if (CircleIntersect(_circleCollider, playerCharacter->GetCircleCollider())) {
+				playerCharacter->TakeDamage(_attackDamage);
+				_damagedPlayer = true;
+			}
+		}
+		if ((_dashStartPosition - _position).absolute() > _dashDistance) {
+			_attackCooldownTimer->ResetTimer();
+			_isAttacking = false;
+			_damagedPlayer = false;
+		}
+	} else if (_chargeAttackTimer->GetTimerFinished()) {
+		_isAttacking = true;
+		_chargeAttackTimer->DeactivateTimer();
+		_dashDirection = (playerCharacter->GetPosition() - _position).normalized();
+		_dashStartPosition = _position;
 
+	} else if (IsInDistance(playerCharacter->GetPosition(), _position, _attackRange) && !_chargeAttackTimer->GetTimerActive() && !_isAttacking) {
+		_dashDistance = (playerCharacter->GetPosition() - _position).absolute() * 2.f;
+		_chargeAttackTimer->ResetTimer();
+	}
+}
+
+void EnemyBoar::SetPosition(Vector2<float> position) {
+	_position = position;
 }
 
 void EnemyBoar::SetTargetPosition(Vector2<float> targetPosition) {
-	_targetPosition = targetPosition;
+	_behaviorData.targetPosition = targetPosition;
 }
 
-void EnemyBoar::SetTargetOrientation(float targetOrientation) {
-	_targetPosition = targetOrientation;
+void EnemyBoar::SetTargetOrientation(float targetOrientation) {	
+	_behaviorData.targetOrientation = targetOrientation;
+}
+
+void EnemyBoar::SetVelocity(Vector2<float> velocity) {
+	_velocity = velocity;
 }
 
 void EnemyBoar::UpdateMovement() {
-	_direction = Vector2<float>(_targetPosition - _position).normalized();
-	
-	_position += separationBehavior->Steering(_behaviorData, this).linearVelocity * deltaTime;
+	_behaviorData.targetPosition = playerCharacter->GetPosition();
 
-	if (!IsInDistance(_position, playerCharacter->GetPosition(), _attackRange * 0.5f)) {
-		_position += _direction * _movementSpeed * deltaTime;
-		_circleCollider.position = _position;
+	_position += _velocity * deltaTime;
+	_orientation += _rotation * deltaTime;
+
+	_steeringOutput = _prioritySteering->Steering(_behaviorData, *this);
+	_rotation += _steeringOutput.angularVelocity * deltaTime;
+	_velocity += _steeringOutput.linearVelocity * deltaTime;
+
+	if (_velocity.absolute() > _behaviorData.maxSpeed) {
+		_velocity.normalize();
+		_velocity *= _behaviorData.maxSpeed;
 	}
-	_orientation = VectorAsOrientation(_direction);
-}
-
-void EnemyBoar::UpdateTarget() {
-	_targetPosition = playerCharacter->GetPosition();
 }
 

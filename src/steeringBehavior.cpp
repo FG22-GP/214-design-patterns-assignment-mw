@@ -9,8 +9,8 @@
 #include "obstacleWall.h"
 
 
-SteeringOutput AlignBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
-	_rotation = behaviorData.targetOrientation - enemy->GetOrientation();
+SteeringOutput AlignBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
+	_rotation = behaviorData.targetOrientation - enemy.GetOrientation();
 	_rotation = WrapMinMax(_rotation, -PI, PI);
 	_rotationSize = abs(_rotation);
 
@@ -24,7 +24,7 @@ SteeringOutput AlignBehavior::Steering(BehaviorData behaviorData, EnemyBase* ene
 	}
 	_wantedRotation *= _rotation / _rotationSize;
 
-	_result.angularVelocity = _wantedRotation - enemy->GetRotation();
+	_result.angularVelocity = _wantedRotation - enemy.GetRotation();
 	_result.angularVelocity /= behaviorData.timeToTarget;
 
 	_angularAcceleration = abs(_result.angularVelocity);
@@ -36,16 +36,16 @@ SteeringOutput AlignBehavior::Steering(BehaviorData behaviorData, EnemyBase* ene
 	return _result;
 }
 
-SteeringOutput FaceBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
-	_direction = enemy->GetTargetPosition() - enemy->GetPosition();
+SteeringOutput FaceBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
+	_direction = enemy.GetBehaviorData().targetPosition - enemy.GetPosition();
 	if (_direction.absolute() == 0) {
 		return SteeringOutput();
 	}
-	behaviorData.targetOrientation = atan2f(-_direction.x, _direction.y);
+	behaviorData.targetOrientation = atan2f(_direction.x, -_direction.y);
 	return AlignBehavior::Steering(behaviorData, enemy);
 }
-SteeringOutput LookAtDirectionBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
-	Vector2 velocity = enemy->GetVelocity();
+SteeringOutput LookAtDirectionBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
+	Vector2 velocity = enemy.GetVelocity();
 	if (velocity.absolute() == 0) {
 		return SteeringOutput();
 	}
@@ -53,14 +53,15 @@ SteeringOutput LookAtDirectionBehavior::Steering(BehaviorData behaviorData, Enem
 	return AlignBehavior::Steering(behaviorData, enemy);
 }
 
-SteeringOutput ArriveBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
+SteeringOutput ArriveBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
 	_targetVelocity = { 0, 0 };
-	_direction = enemy->GetTargetPosition() - enemy->GetPosition();
+	_direction = enemy.GetBehaviorData().targetPosition - enemy.GetPosition();
 
 	_targetSpeed = 0.f;
 	_distance = _direction.absolute();
 
 	if (_distance < behaviorData.linearTargetRadius) {
+		enemy.SetVelocity({ 0.f, 0.f });
 		return SteeringOutput();
 	}
 	if (_distance > behaviorData.linearSlowDownRadius) {
@@ -71,26 +72,31 @@ SteeringOutput ArriveBehavior::Steering(BehaviorData behaviorData, EnemyBase* en
 	_targetVelocity = _direction.normalized();
 	_targetVelocity *= _targetSpeed;
 
-	_result.linearVelocity = _targetVelocity - enemy->GetVelocity();
+	_result.linearVelocity = _targetVelocity - enemy.GetVelocity();
 	_result.linearVelocity /= behaviorData.timeToTarget;
 
 	if (_result.linearVelocity.absolute() > behaviorData.maxLinearAcceleration) {
-		_result.linearVelocity = _result.linearVelocity.absolute();
+		_result.linearVelocity.normalize();
 		_result.linearVelocity *= behaviorData.maxLinearAcceleration;
 	}
 	_result.angularVelocity = 0.f;
 	return _result;
 }
 
-SteeringOutput CollisionAvoidanceBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
-	for (unsigned int i = 0; i < enemy->GetQueriedEnemies().size(); i++) {
-		if (enemy->GetObjectID() == enemy->GetQueriedEnemies()[i]->GetObjectID()) {
+SteeringOutput CollisionAvoidanceBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
+	for (unsigned int i = 0; i < enemy.GetQueriedObjects().size(); i++) {
+		if (enemy.GetQueriedObjects()[i]->GetObjectType() != ObjectType::Enemy) {
 			continue;
 		}
-		_direction = enemy->GetQueriedEnemies()[i]->GetPosition() - enemy->GetPosition();
+		if (enemy.GetObjectID() == enemy.GetQueriedObjects()[i]->GetObjectID()) {
+			continue;
+		}
+		std::shared_ptr<EnemyBase> targetEnemy = std::static_pointer_cast<EnemyBase>(enemy.GetQueriedObjects()[i]);
 
-		_relativePos = enemy->GetQueriedEnemies()[i]->GetPosition() - enemy->GetPosition();
-		_relativeVel = enemy->GetQueriedEnemies()[i]->GetVelocity() - enemy->GetVelocity();
+		_direction = targetEnemy->GetPosition() - enemy.GetPosition();
+
+		_relativePos = targetEnemy->GetPosition() - enemy.GetPosition();
+		_relativeVel = targetEnemy->GetVelocity() - enemy.GetVelocity();
 
 		_relativeSpeed = _relativeVel.absolute();
 		_timeToCollision = Vector2<float>::dotProduct(_relativePos, _relativeVel) / (_relativeSpeed * _relativeSpeed);
@@ -98,12 +104,12 @@ SteeringOutput CollisionAvoidanceBehavior::Steering(BehaviorData behaviorData, E
 		_distance = _relativePos.absolute();
 		_minSeparation = _distance - _relativeSpeed * _timeToCollision;
 
-		if (_minSeparation > 2 * enemy->GetCollider().radius) {
+		if (_minSeparation > 2 * enemy.GetCollider().radius) {
 			continue;
 		}
 		if (_timeToCollision < _shortestTime) {
 			_shortestTime = _timeToCollision;
-			_firstTargetPosition = enemy->GetQueriedEnemies()[i]->GetPosition();
+			_firstTargetPosition = enemy.GetQueriedObjects()[i]->GetPosition();
 			_firstMinSeparation = _minSeparation;
 			_firstDistance = _distance;
 			_firstRelativePos = _relativePos;
@@ -115,8 +121,8 @@ SteeringOutput CollisionAvoidanceBehavior::Steering(BehaviorData behaviorData, E
 	if (!_gotTarget) {
 		return SteeringOutput();
 	}
-	if (_firstMinSeparation <= 0 || _firstDistance < 2 * enemy->GetCollider().radius) {
-		_relativePos = enemy->GetPosition() - _firstTargetPosition;
+	if (_firstMinSeparation <= 0 || _firstDistance < 2 * enemy.GetCollider().radius) {
+		_relativePos = enemy.GetPosition() - _firstTargetPosition;
 	} else {
 		_relativePos = _firstRelativePos + _firstRelativeVel * _shortestTime;
 	}
@@ -128,11 +134,11 @@ SteeringOutput CollisionAvoidanceBehavior::Steering(BehaviorData behaviorData, E
 	return _result;
 }
 
-SteeringOutput SeekBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
+SteeringOutput SeekBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
 	if (_fleeBehaviour) {
-		_result.linearVelocity = enemy->GetPosition() - enemy->GetTargetPosition();
+		_result.linearVelocity = enemy.GetPosition() - enemy.GetBehaviorData().targetPosition;
 	} else {
-		_result.linearVelocity = enemy->GetTargetPosition() - enemy->GetPosition();
+		_result.linearVelocity = enemy.GetBehaviorData().targetPosition - enemy.GetPosition();
 	}
 	_result.linearVelocity = _result.linearVelocity.normalized();
 	_result.linearVelocity *= behaviorData.maxLinearAcceleration;
@@ -144,19 +150,19 @@ SteeringOutput SeekBehavior::Steering(BehaviorData behaviorData, EnemyBase* enem
 	_result.angularVelocity = 0.f;
 	return _result;
 }
-SteeringOutput ObstacleAvoidanceBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
+SteeringOutput ObstacleAvoidanceBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
 	_rayPoint.pointHit = false;
 	_ray.length = behaviorData.lookAhead;
-	_ray.direction = (enemy->GetVelocity() * _ray.length).normalized();
-	_ray.startPosition = enemy->GetPosition();
+	_ray.direction = (enemy.GetVelocity() * _ray.length).normalized();
+	_ray.startPosition = enemy.GetPosition();
 
 	_whiskerA = _ray;
 	_whiskerA.length = _ray.length * 0.75f;
-	_whiskerA.direction = RotateVector(-PI * 0.25, enemy->GetPosition(), enemy->GetPosition() + _ray.direction);
+	_whiskerA.direction = RotateVector(-PI * 0.25, enemy.GetPosition(), enemy.GetPosition() + _ray.direction);
 	
 	_whiskerB = _ray;
 	_whiskerB.length = _ray.length * 0.75f;
-	_whiskerB.direction = RotateVector(PI * 0.25, enemy->GetPosition(), enemy->GetPosition() + _ray.direction);
+	_whiskerB.direction = RotateVector(PI * 0.25, enemy.GetPosition(), enemy.GetPosition() + _ray.direction);
 
 	//debugDrawer->AddDebugLine(enemy->GetPosition(), enemy->GetPosition() + _ray.direction * _ray.length, {0, 255, 0, 255 });
 	//debugDrawer->AddDebugLine(enemy->GetPosition(), enemy->GetPosition() + _whiskerA.direction * _whiskerA.length, { 0, 255, 0, 255 });
@@ -182,33 +188,36 @@ SteeringOutput ObstacleAvoidanceBehavior::Steering(BehaviorData behaviorData, En
 	behaviorData.targetPosition = _rayPoint.position + _rayPoint.normal * behaviorData.avoidDistance;
 	return SeekBehavior::Steering(behaviorData, enemy);
 }
-SteeringOutput PursueBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
-	_direction = enemy->GetPosition() - enemy->GetTargetPosition();
+SteeringOutput PursueBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
+	_direction = enemy.GetPosition() - enemy.GetBehaviorData().targetPosition;
 	_distance = _direction.absolute();
-	_speed = enemy->GetVelocity().absolute();
+	_speed = enemy.GetVelocity().absolute();
 
 	if (_speed <= _distance / behaviorData.maxPrediction) {
 		_prediction = behaviorData.maxPrediction;
 	} else {
 		_prediction = _distance / _speed;
 	}
-	behaviorData.targetPosition = enemy->GetTargetPosition() + (behaviorData.targetVelocity * _prediction);
+	behaviorData.targetPosition = enemy.GetBehaviorData().targetPosition + (behaviorData.targetVelocity * _prediction);
 
 	return SeekBehavior::Steering(behaviorData, enemy);
 }
 
-SteeringOutput SeparationBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
+SteeringOutput SeparationBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
 	_result.angularVelocity = 0.f;
 	_result.linearVelocity = { 0.f, 0.f };
 
 	//Loops through all enemies detected by the quadtree
-	for (unsigned int i = 0; i < enemy->GetQueriedEnemies().size(); i++) {
-		//Skips if the enemy in the loop is the same one as the current one
-		if (enemy->GetObjectID() == enemy->GetQueriedEnemies()[i]->GetObjectID()) {
+	for (unsigned int i = 0; i < enemy.GetQueriedObjects().size(); i++) {
+		if (enemy.GetQueriedObjects()[i]->GetObjectType() == ObjectType::Projectile) {
 			continue;
 		}
-		_targetPosition = enemy->GetQueriedEnemies()[i]->GetPosition();
-		_direction = _targetPosition - enemy->GetPosition();
+		//Skips if the enemy in the loop is the same one as the current one
+		if (enemy.GetObjectID() == enemy.GetQueriedObjects()[i]->GetObjectID()) {
+			continue;
+		}
+		_targetPosition = enemy.GetQueriedObjects()[i]->GetPosition();
+		_direction = _targetPosition - enemy.GetPosition();
 		_distance = _direction.absolute();
 		//If the enemies are closer to each other than the threshold,
 		if (_distance < behaviorData.separationThreshold) {
@@ -222,8 +231,8 @@ SteeringOutput SeparationBehavior::Steering(BehaviorData behaviorData, EnemyBase
 	return _result;
 }
 
-SteeringOutput VelocityMatchBehaviour::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
-	_result.linearVelocity = behaviorData.targetVelocity - enemy->GetVelocity();
+SteeringOutput VelocityMatchBehaviour::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
+	_result.linearVelocity = behaviorData.targetVelocity - enemy.GetVelocity();
 	_result.linearVelocity /= behaviorData.timeToTarget;
 
 	if (_result.linearVelocity.absolute() > behaviorData.maxLinearAcceleration) {
@@ -234,23 +243,23 @@ SteeringOutput VelocityMatchBehaviour::Steering(BehaviorData behaviorData, Enemy
 	return _result;
 }
 
-SteeringOutput WanderBehavior::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
+SteeringOutput WanderBehavior::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
 	_wanderOrientation = RandomBinomal(-1, 1) * behaviorData.wanderRate;
 
-	behaviorData.targetOrientation = _wanderOrientation + enemy->GetOrientation();
+	behaviorData.targetOrientation = _wanderOrientation + enemy.GetOrientation();
 	
-	behaviorData.targetPosition = enemy->GetPosition() +
-		(OrientationAsVector(enemy->GetOrientation()) * behaviorData.wanderOffset);
+	behaviorData.targetPosition = enemy.GetPosition() +
+		(OrientationAsVector(enemy.GetOrientation()) * behaviorData.wanderOffset);
 
 	behaviorData.targetPosition += OrientationAsVector(behaviorData.targetOrientation) * behaviorData.wanderRadius;
 	debugDrawer->AddDebugCross(behaviorData.targetPosition, 25.f, { 0, 255, 0, 255 });
 
 	_result = FaceBehavior::Steering(behaviorData, enemy);
-	_result.linearVelocity = OrientationAsVector(enemy->GetOrientation()) * behaviorData.maxLinearAcceleration;
+	_result.linearVelocity = OrientationAsVector(enemy.GetOrientation()) * behaviorData.maxLinearAcceleration;
 	return _result;
 }
 
-SteeringOutput BlendSteering::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
+SteeringOutput BlendSteering::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
 	_currentWeight = 0.f;
 	_result.angularVelocity = 0.f;
 	_result.linearVelocity = { 0.f, 0.f };
@@ -272,7 +281,7 @@ void BlendSteering::ClearBehaviours() {
 	_behaviors.clear();
 }
 
-SteeringOutput PrioritySteering::Steering(BehaviorData behaviorData, EnemyBase* enemy) {
+SteeringOutput PrioritySteering::Steering(BehaviorData behaviorData, EnemyBase& enemy) {
 	_result.linearVelocity = { 0.f, 0.f };
 	_result.angularVelocity = 0.f;
 

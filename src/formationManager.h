@@ -1,35 +1,27 @@
 #pragma once
+#include "dataStructuresAndMethods.h"
 #include "vector2.h"
+#include "weaponComponent.h"
 
+#include <array>
 #include <climits>
-#include <vector>
 #include <memory>
+#include <vector>
 
 class EnemyBase;
 
 enum class FormationType {
 	DefensiveCircle,
 	SlotRole,
-	Count
-};
-
-enum class SlotClass {
-	Archer,
-	Fighter,
-	Mage,
+	VShape,
 	Count
 };
 
 enum class SlotAttackType {
+	Bow,
 	Magic,
 	Melee,
-	Missle,
 	Count
-};
-
-struct SlotOffset {
-	Vector2<float> position = Vector2<float>(0.f, 0.f);
-	float orientation = 0.f;
 };
 
 struct CostAndSlot {
@@ -39,11 +31,12 @@ struct CostAndSlot {
 
 struct SlotPositionAndType {
 	unsigned int slotNumber = 0;
-	SlotOffset positionAndOrientation;
+	AnchorPoint positionAndOrientation;
 	SlotAttackType slotAttackType;
 };
 
 struct CharacterAndSlots {
+	bool isAssigned = false;
 	std::shared_ptr<EnemyBase> enemyCharacter = nullptr;
 	float assignmentEase = 0.f;
 	std::vector<CostAndSlot> costAndSlots;
@@ -59,32 +52,42 @@ std::vector<CharacterAndSlots> SortByAssignmentEase(std::vector<CharacterAndSlot
 
 class FormationPattern {
 public:
+	FormationPattern() {}
+	~FormationPattern() {}
+
+	virtual void CreateSlots(unsigned int slotCount, AnchorPoint anchorPoint) = 0;
+
 	virtual unsigned int CalculateNumberOfSlots(std::vector<SlotAssignment> slotAssignments) = 0;
 
-	virtual SlotOffset GetDriftOffset(std::vector<SlotAssignment> slotAssignments, unsigned int numberOfSlots) = 0;
-	virtual SlotOffset GetSlotLocation(float slotNumber, unsigned int numberOfSlots) = 0;
+	virtual AnchorPoint GetDriftOffset(std::vector<SlotAssignment> slotAssignments) = 0;
+	virtual AnchorPoint GetSlotLocation(unsigned int slotNumber, unsigned int numberOfSlots) = 0;
 
-	virtual float GetSlotCost(SlotClass slotClass, unsigned int index) = 0;
+	virtual float GetSlotCost(WeaponType weaponType, unsigned int index) = 0;
 
 	virtual const unsigned int GetNumberOfSlots() const = 0;
 
 	virtual bool SupportsSlots(unsigned int slotCount) = 0;
+
+	virtual void SetSlotPositionAndType() = 0;
 };
 
 class DefensiveCirclePattern : public FormationPattern {
 public:
 	DefensiveCirclePattern() {}
 	~DefensiveCirclePattern() {}
+	void CreateSlots(unsigned int slotCount, AnchorPoint anchorPoint) override;
 
 	unsigned int CalculateNumberOfSlots(std::vector<SlotAssignment> slotAssignments) override;
 
-	SlotOffset GetDriftOffset(std::vector<SlotAssignment> slotAssignments, unsigned int numberOfSlots) override;
-	SlotOffset GetSlotLocation(float slotNumber, unsigned int numberOfSlots) override;
-	float GetSlotCost(SlotClass slotClass, unsigned int index) override;
+	AnchorPoint GetDriftOffset(std::vector<SlotAssignment> slotAssignments) override;
+	AnchorPoint GetSlotLocation(unsigned int slotNumber, unsigned int numberOfSlots) override;
+	float GetSlotCost(WeaponType weaponType, unsigned int index) override;
 
 	const unsigned int GetNumberOfSlots() const override;
 
 	bool SupportsSlots(unsigned int slotCount) override;
+
+	void SetSlotPositionAndType() override;
 
 private:
 	unsigned int _numberOfSlots = 9;
@@ -95,38 +98,69 @@ class SlotRolePattern : public FormationPattern {
 public:
 	SlotRolePattern();
 	~SlotRolePattern() {}
+	void CreateSlots(unsigned int maxAmountSlots, AnchorPoint anchorPoint) override;
+
 	unsigned int CalculateNumberOfSlots(std::vector<SlotAssignment> slotAssignments) override;
 
-	SlotOffset GetDriftOffset(std::vector<SlotAssignment> slotAssignments, unsigned int numberOfSlots) override;
-	SlotOffset GetSlotLocation(float slotNumber, unsigned int numberOfSlots) override;
+	AnchorPoint GetDriftOffset(std::vector<SlotAssignment> slotAssignments) override;
+	AnchorPoint GetSlotLocation(unsigned int slotNumber, unsigned int numberOfSlots) override;
 
-	float GetSlotCost(SlotClass slotClass, unsigned int index) override;
+	float GetSlotCost(WeaponType weaponType, unsigned int index) override;
 
 	const unsigned int GetNumberOfSlots() const override;
 
 	bool SupportsSlots(unsigned int slotCount) override;
 
+	void SetSlotPositionAndType() override;
 private:
 	unsigned int _numberOfSlots = 9;
 	std::vector<SlotPositionAndType> _slotPositionAndType;
 	float _characterRadius = 25.f;
+
+};
+
+class VShapePattern : public FormationPattern {
+public:
+	VShapePattern();
+	~VShapePattern() {}
+
+	void CreateSlots(unsigned int slotCount, AnchorPoint anchorPoint) override;
+
+	unsigned int CalculateNumberOfSlots(std::vector<SlotAssignment> slotAssignments) override;
+
+	AnchorPoint GetDriftOffset(std::vector<SlotAssignment> slotAssignments) override;
+	AnchorPoint GetSlotLocation(unsigned int slotNumber, unsigned int numberOfSlots) override;
+
+	float GetSlotCost(WeaponType weaponType, unsigned int index) override;
+
+	const unsigned int GetNumberOfSlots() const override;
+
+	bool SupportsSlots(unsigned int slotCount) override;
+
+	void SetSlotPositionAndType() override;
+
+private:
+	unsigned int _numberOfSlots = 9;
+	std::vector<SlotPositionAndType> _slotPositionAndType;
+	float _offset = 15.f;
+
 };
 
 class FormationManager {
 public:
-	FormationManager(FormationType formationType);
+	FormationManager(FormationType formationType, unsigned int maxAmountSlots, AnchorPoint anchorPoint);
 	~FormationManager() {}
 
 	bool AddCharacter(std::shared_ptr<EnemyBase> enemyCharacter);
 	void UpdateSlots();
-	void UpdateSlotAssignments();
+	void ReconstructSlotAssignments();
 	void RemoveCharacter(std::shared_ptr<EnemyBase> enemyCharacter);
 
 	std::vector<SlotAssignment> GetSlotAssignments();
-	SlotOffset GetAnchorPoint();
 
 private:
-	SlotOffset _driftOffset;
+	AnchorPoint _anchorPoint;
+	AnchorPoint _driftOffset;
 	std::shared_ptr<FormationPattern> _formationPattern;
 	std::vector<SlotAssignment> _slotAssignments;
 	float _costLimit = 1500.f;

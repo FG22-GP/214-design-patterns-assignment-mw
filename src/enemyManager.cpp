@@ -12,18 +12,9 @@
 #include "weaponComponent.h"
 
 EnemyManager::EnemyManager() {
-	//Creates the quadtree for the enemies
-	QuadTreeNode quadTreeNode;
-	quadTreeNode.rectangle = AABB::makeFromPositionSize(
-		Vector2(windowWidth * 0.5f, windowHeight * 0.5f), windowHeight, windowWidth);
-	_enemyQuadTree = std::make_shared<QuadTree<std::shared_ptr<EnemyBase>>>(quadTreeNode, 25);
-
 	//Creates an unordered map with objectpool of the different enemy types
 	_enemyPools[EnemyType::Boar] = std::make_shared<ObjectPool<std::shared_ptr<EnemyBase>>>(_enemyAmountLimit);
-	_enemyPools[EnemyType::Human] = std::make_shared<ObjectPool<std::shared_ptr<EnemyBase>>>(_enemyAmountLimit);
-	
-	_steeringBehaviors[SteeringBehaviorType::Align] = std::make_shared<AlignBehavior>();
-	_steeringBehaviors[SteeringBehaviorType::Separation] = std::make_shared<SeparationBehavior>();
+	_enemyPools[EnemyType::Human] = std::make_shared<ObjectPool<std::shared_ptr<EnemyBase>>>(_enemyAmountLimit);	
 
 	_numberOfEnemyTypes = (unsigned int)EnemyType::Count;
 }
@@ -44,11 +35,23 @@ void EnemyManager::Init() {
 }
 
 void EnemyManager::Update() {
-	if (_spawnTimer->GetTimerFinished() && _activeEnemies.size() < _enemyAmountLimit) {
-		EnemySpawner();
-	}
 	for (unsigned i = 0; i < _activeEnemies.size(); i++) {
 		_activeEnemies[i]->Update();
+	}
+}
+
+void EnemyManager::UpdateSurvival() {
+	if (_spawnTimer->GetTimerFinished() && _activeEnemies.size() < _enemyAmountLimit) {
+		SurvivalEnemySpawner();
+	}
+}
+
+void EnemyManager::UpdateTactical() {
+	if (_spawnTimer->GetTimerFinished() && _activeEnemies.size() < _enemyAmountLimit) {
+		TacticalEnemySpawner();
+	}	
+	for (unsigned int i = 0; i < _formationManagers.size(); i++) {
+		_formationManagers[i]->UpdateSlots();
 	}
 }
 
@@ -62,40 +65,60 @@ std::vector<std::shared_ptr<EnemyBase>> EnemyManager::GetActiveEnemies() {
 	return _activeEnemies;
 }
 
-std::shared_ptr<QuadTree<std::shared_ptr<EnemyBase>>> EnemyManager::GetEnemyQuadTree() {
-	return _enemyQuadTree;
-}
-
-std::unordered_map<SteeringBehaviorType, std::shared_ptr<SteeringBehavior>> EnemyManager::GetSteeringBehaviors() {
-	return _steeringBehaviors;
-}
-
-void EnemyManager::ClearEnemyQuadTree() {
-	_enemyQuadTree->Clear();
-}
-
 //Creates a specific enemy based on the enemyType enum
 void EnemyManager::CreateNewEnemy(EnemyType enemyType, float orientation, Vector2<float> direction, Vector2<float> position) {
 	switch (enemyType) {
 	case EnemyType::Boar:
-		_enemyPools[enemyType]->PoolObject(std::make_shared<EnemyBoar>(_lastEnemyID, 1, 20, 15.f, 100.f));
+		_enemyPools[enemyType]->PoolObject(std::make_shared<EnemyBoar>(_lastEnemyID, enemyType));
 		break;
 
 	case EnemyType::Human:
-		_enemyPools[enemyType]->PoolObject(std::make_shared<EnemyHuman>(_lastEnemyID, 15, 75.f));
+		_enemyPools[enemyType]->PoolObject(std::make_shared<EnemyHuman>(_lastEnemyID, enemyType));
 		break;
 	
 	default:
 		break;
-	}
-	_lastEnemyID ++;
+	}	
+	_lastEnemyID++;
 }
 
-void EnemyManager::EnemySpawner() {
-	for (unsigned int i = 0; i < _spawnNumberOfEnemies; i++) {
-		std::uniform_int_distribution dist{ 0, 1 };
-		Vector2<float> spawnPosition = { 0.f, 0.f };
+void EnemyManager::TacticalEnemySpawner() {
+	std::uniform_int_distribution dist{ 0, 3 };
+	AnchorPoint anchorPoint;
+	switch (dist(randomEngine)) {
+	case 0:
+		anchorPoint.position = { windowWidth * 0.5f, 0 };
+		anchorPoint.borderSide = BorderSide::Top;
+		break;
+	case 1:
+		anchorPoint.position = { windowWidth * 0.5f, windowHeight };
+		anchorPoint.borderSide = BorderSide::Bottom;
+		break;
+	case 2:
+		anchorPoint.position = { 0, windowHeight * 0.5f };
+		anchorPoint.borderSide = BorderSide::Left;
+		break;
+	case 3:
+		anchorPoint.position = { windowWidth, windowHeight * 0.5f };
+		anchorPoint.borderSide = BorderSide::Right;
+		break;
+	default:
+		break;
+	}
+	anchorPoint.orientation = VectorAsOrientation(Vector2<float>(playerCharacter->GetPosition() - anchorPoint.position));
+	_formationManagers.emplace_back(std::make_shared<FormationManager>(FormationType::VShape, 9, anchorPoint));
+	while (_activeEnemies.size() < 9) {
+		enemyManager->SpawnEnemy(EnemyType::Human, anchorPoint.orientation, Vector2<float>(0.f, 0.f), anchorPoint.position);
+		_formationManagers.back()->AddCharacter(_activeEnemies.back());
+	}
+	//_spawnTimer->DeactivateTimer();
+	_spawnTimer->ResetTimer();
+}
 
+void EnemyManager::SurvivalEnemySpawner() {
+	std::uniform_int_distribution dist{ 0, 3 };
+	for (unsigned int i = 0; i < _spawnNumberOfEnemies; i++) {
+		Vector2<float> spawnPosition = { 0.f, 0.f };
 		if (i < _spawnNumberOfEnemies * 0.5f) {
 			float distX = 0.f;
 			std::uniform_real_distribution<float> distY{ 0.f, windowHeight };
@@ -123,7 +146,6 @@ void EnemyManager::EnemySpawner() {
 		} else {
 			enemyManager->SpawnEnemy(EnemyType::Human, 0.f, Vector2<float>(0.f, 0.f), spawnPosition);
 		}
-
 	}
 	_spawnTimer->ResetTimer();
 }
@@ -176,7 +198,7 @@ void EnemyManager::TakeDamage(unsigned int enemyIndex, unsigned int damageAmount
 
 void EnemyManager::UpdateQuadTree() {
 	for (unsigned i = 0; i < _activeEnemies.size(); i++) {
-		_enemyQuadTree->Insert(_activeEnemies[i], _activeEnemies[i]->GetCollider());
+		objectBaseQuadTree->Insert(_activeEnemies[i], _activeEnemies[i]->GetCollider());
 	}
 }
 //Binary search based on ID

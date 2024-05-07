@@ -10,11 +10,6 @@
 #include "quadTree.h"
 
 ProjectileManager::ProjectileManager() {
-	QuadTreeNode quadTreeNode;
-	quadTreeNode.rectangle = AABB::makeFromPositionSize(
-		Vector2(windowWidth * 0.5f, windowHeight * 0.5f), windowHeight, windowWidth);
-	_projectileQuadTree = std::make_shared<QuadTree<std::shared_ptr<Projectile>>>(quadTreeNode, 25);
-
 	_numberOfProjectileTypes = (unsigned int)ProjectileType::Count;
 	for (unsigned int i = 0; i < _numberOfProjectileTypes; i++) {
 		_projectilePools[(ProjectileType)i] = std::make_shared<ObjectPool<std::shared_ptr<Projectile>>>(_projectileAmountLimit);
@@ -51,10 +46,6 @@ void ProjectileManager::Render() {
 	}
 }
 
-void ProjectileManager::ClearProjectileQuadTree() {
-	_projectileQuadTree->Clear();
-}
-
 void ProjectileManager::CreateNewProjectile(ProjectileType projectileType, const char* spritePath, float orientation, unsigned int projectileDamage, Vector2<float> direction, Vector2<float> position) {
 	_projectilePools[projectileType]->PoolObject(std::make_shared<Projectile>(projectileType, spritePath, projectileDamage, _lastProjectileID));
 	_lastProjectileID++;
@@ -72,18 +63,39 @@ void ProjectileManager::SpawnProjectile(ProjectileType projectileType, const cha
 }
 
 bool ProjectileManager::CheckCollision(ProjectileType projectileType, unsigned int projectileIndex) {
-	if (projectileType == ProjectileType::PlayerProjectile) {
-		std::vector<std::shared_ptr<EnemyBase>> enemiesHit = enemyManager->GetEnemyQuadTree()->Query(_activeProjectiles[projectileIndex]->GetCollider());
-		for (unsigned int i = 0; i < enemiesHit.size(); i++) {
-			if (enemiesHit[i]->TakeDamage(_activeProjectiles[projectileIndex]->GetProjectileDamage())) {
-				enemyManager->RemoveEnemy(enemiesHit[i]->GetEnemyType(), enemiesHit[i]->GetObjectID());
-			}
-		}
-		if (enemiesHit.size() > 0) {
+	if (projectileType == ProjectileType::EnemyProjectile) {
+		if (IsInDistance(playerCharacter->GetPosition(), _activeProjectiles[projectileIndex]->GetPosition(),
+			_activeProjectiles[projectileIndex]->GetCollider().radius)) {
+			playerCharacter->TakeDamage(_activeProjectiles[projectileIndex]->GetProjectileDamage());
 			RemoveProjectile(projectileType, _activeProjectiles[projectileIndex]->GetObjectID());
 			return true;
 		}
+		return false;
 	}
+	_objectsHit = objectBaseQuadTree->Query(_activeProjectiles[projectileIndex]->GetCollider());
+	for (unsigned int i = 0; i < _objectsHit.size(); i++) {
+		if (!_objectsHit[i]) {
+			continue;
+		}
+		if (projectileType == ProjectileType::PlayerProjectile) {
+			if (_objectsHit[i]->GetObjectType() == ObjectType::Enemy) {
+				_enemyHit = std::static_pointer_cast<EnemyBase>(_objectsHit[i]);	
+				//Returns true if the enemy dies
+				if (_enemyHit->TakeDamage(_activeProjectiles[projectileIndex]->GetProjectileDamage())) {
+					enemyManager->RemoveEnemy(_enemyHit->GetEnemyType(), _enemyHit->GetObjectID());
+				}
+				RemoveProjectile(projectileType, _activeProjectiles[projectileIndex]->GetObjectID());
+				return true;
+			}
+		} /*else if (projectileType == ProjectileType::EnemyProjectile) {
+			if (_objectsHit[i]->GetObjectType() == ObjectType::Player) {
+				playerCharacter->TakeDamage(_activeProjectiles[projectileIndex]->GetProjectileDamage());
+				RemoveProjectile(projectileType, _activeProjectiles[projectileIndex]->GetObjectID());
+				return true;
+			}
+		}*/
+	}
+
 	return false;
 }
 
@@ -121,12 +133,8 @@ void ProjectileManager::RemoveProjectile(ProjectileType projectileType, unsigned
 
 void ProjectileManager::UpdateQuadTree() {
 	for (unsigned int i = 0; i < _activeProjectiles.size(); i++) {
-		_projectileQuadTree->Insert(_activeProjectiles[i], _activeProjectiles[i]->GetCollider());
+		objectBaseQuadTree->Insert(_activeProjectiles[i], _activeProjectiles[i]->GetCollider());
 	}
-}
-
-std::shared_ptr<QuadTree<std::shared_ptr<Projectile>>> ProjectileManager::GetProjectileQuadTree() {
-	return _projectileQuadTree;
 }
 
 int ProjectileManager::BinarySearch(int low, int high, int targetID) {

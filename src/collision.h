@@ -32,7 +32,7 @@ struct Ray {
 	float length = 0.f;
 };
 
-bool CircleIntersect(Circle& circleA, Circle& circleB);
+bool CircleIntersect(Circle circleA, Circle circleB);
 
 bool AABBIntersect(AABB& boxA, AABB& boxB);
 

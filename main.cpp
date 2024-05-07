@@ -46,11 +46,18 @@ int main(int argc, char* argv[]) {
 	imGuiHandler = std::make_shared<ImGuiHandler>();
 	obstacleManager = std::make_shared<ObstacleManager>();
 	projectileManager = std::make_shared<ProjectileManager>();
-	playerCharacter = std::make_shared<PlayerCharacter>(0.f, Vector2<float>(windowWidth * 0.5f, windowHeight * 0.5f));
+	playerCharacter = std::make_shared<PlayerCharacter>(0.f, 0, Vector2<float>(windowWidth * 0.5f, windowHeight * 0.5f));
 	rayCast = std::make_shared<RayCast>();
 
 	timerManager = std::make_shared<TimerManager>();
 	separationBehavior = std::make_shared<SeparationBehavior>();
+
+	QuadTreeNode quadTreeNode;
+	quadTreeNode.rectangle = AABB::makeFromPositionSize(
+		Vector2(windowWidth * 0.5f, windowHeight * 0.5f), windowHeight, windowWidth);
+	objectBaseQuadTree = std::make_shared<QuadTree<std::shared_ptr<ObjectBase>>>(quadTreeNode, 10);
+
+
 
 	//Init here
 	enemyManager->Init();
@@ -58,7 +65,7 @@ int main(int argc, char* argv[]) {
 	playerCharacter->Init();
 	projectileManager->Init();
 
-	obstacleManager->CreateWall({ 150.f, 150.f }, 200.f, 100.f, { 200, 0, 200 });
+	//objectBaseQuadTree->Insert(playerCharacter, playerCharacter->GetCircleCollider());
 
 	gameStateHandler->AddState(std::make_shared<MenuState>());
 
@@ -122,11 +129,11 @@ int main(int argc, char* argv[]) {
 		gameStateHandler->RenderState();
 
 		debugDrawer->DrawBoxes();
+		debugDrawer->DrawRectangles();
 		debugDrawer->DrawCircles();
 		debugDrawer->DrawLines();
 
-		enemyManager->ClearEnemyQuadTree();
-		projectileManager->ClearProjectileQuadTree();
+		objectBaseQuadTree->Clear();
 
 		//Render text here
 		gameStateHandler->RenderStateText();

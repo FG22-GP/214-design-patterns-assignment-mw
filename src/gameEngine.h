@@ -16,6 +16,7 @@ class DebugDrawer;
 class EnemyManager;
 class GameStateHandler;
 class ImGuiHandler;
+class ObjectBase;
 class ObstacleManager;
 class PlayerCharacter;
 class ProjectileManager;
@@ -24,6 +25,9 @@ class SteeringBehavior;
 class TimerManager;
 
 enum class ButtonType;
+
+template<class T>
+class QuadTree;
 
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
@@ -35,9 +39,12 @@ extern std::shared_ptr<ImGuiHandler> imGuiHandler;
 extern std::shared_ptr<ObstacleManager> obstacleManager;
 extern std::shared_ptr<PlayerCharacter> playerCharacter;
 extern std::shared_ptr<ProjectileManager> projectileManager;
+extern std::shared_ptr<QuadTree<std::shared_ptr<ObjectBase>>> objectBaseQuadTree;
 extern std::shared_ptr<RayCast> rayCast;
 extern std::shared_ptr<SteeringBehavior> separationBehavior;
 extern std::shared_ptr<TimerManager> timerManager;
+
+
 extern std::unordered_map<ButtonType, std::shared_ptr<Button>> _buttons;
 extern bool runningGame;
 
